@@ -1,7 +1,26 @@
-import * as cc from 'cc';
 
 declare namespace pTS {
 
+    namespace number {
+        interface IPercentNumber {
+            is_decimal: boolean;
+            value: number;
+        }
+
+        type TPercentNumber = number | IPercentNumber;
+
+        function quick_percent_number(num: TPercentNumber): number;
+    }
+
+    namespace easing {
+        const list: TEasingOptions[];
+        type TEasingOptions = "linear" | "smooth" | "fade" | "constant" | "quadIn" | "quadOut" | "quadInOut" | "quadOutIn" | "cubicIn" | "cubicOut" | "cubicInOut" | "cubicOutIn" | "quartIn" | "quartOut" | "quartInOut" | "quartOutIn" | "quintIn" | "quintOut" | "quintInOut" | "quintOutIn" | "sineIn" | "sineOut" | "sineInOut" | "sineOutIn" | "expoIn" | "expoOut" | "expoInOut" | "expoOutIn" | "circIn" | "circOut" | "circInOut" | "circOutIn" | "elasticIn" | "elasticOut" | "elasticInOut" | "elasticOutIn" | "backIn" | "backOut" | "backInOut" | "backOutIn" | "bounceIn" | "bounceOut" | "bounceInOut" | "bounceOutIn";
+        type TEasingMechanic = (percent: number.TPercentNumber) => number;
+
+        type TFlexEasingOption = TEasingOptions | TEasingMechanic;
+
+        function ease(percent: number.TPercentNumber, option: TFlexEasingOption): number;
+    }
 
     namespace tween {
 
@@ -74,7 +93,7 @@ declare namespace pTS {
         type FLogger = (opt: ITweenOption, total: number, id: number) => void
 
         interface IEaseTweenOption extends ITweenOption {
-            easing?: cc.TweenEasing
+            easing?: easing.TEasingOptions
         }
 
         type TNumberToOption = number | IEaseTweenOption

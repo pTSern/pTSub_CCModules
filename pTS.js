@@ -1,11 +1,13 @@
 
 const _g = globalThis;
+
 function random_character(divided = false) {
     const rander = Math.random() * (26) >> 0;
 
     const step = divided ? (Math.random() < 0.5 ? 65: 97) : 65
     return String.fromCharCode(step + rander)
 }
+
 function char_replacer_at(str, index, char) {
     if (str.length <= index) {
        str = str.padEnd(index, ' ');
@@ -15,6 +17,16 @@ function char_replacer_at(str, index, char) {
 
     return str;
 }
+
+
+class pNumber {
+
+}
+
+class pEasing {
+
+}
+
 class pTween {
     constructor() {
         this._memory = {}
