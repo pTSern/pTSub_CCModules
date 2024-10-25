@@ -13,7 +13,7 @@
     "loadPluginInNative": true,
     "loadPluginInMiniGame": true,
     "isPlugin": true,
-    "executionScope": "enclosed",
+    "executionScope": "global",
     "simulateGlobals": [
       "pTS"
     ]
