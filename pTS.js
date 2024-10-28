@@ -1,3 +1,16 @@
+
+/**
+ * @typedef { 'Float' | 'Interger' | 'String' } TPrimitiveType
+ * @typedef { TPrimitivType | 'Object' } TCCPropertyType
+ *
+ * @typedef { Object } IPrimitiveType
+ * @property { TPrimitiveType } name
+ * @property { number | string } default
+ *
+ *
+ */
+
+
 (
     function(global) {
 
@@ -22,7 +35,36 @@
             console.log(constructor)
         }
 
+        const cc_attrs_list = ['default', 'type', 'ctor', 'hasGetter', 'serializable', 'hasSetter']
+
+        function attributes(target, prop) {
+            const data = {}
+            const prototype = target.prototype || target;
+            const constructor = prototype.constructor || prototype;
+            const attrs = constructor.__attrs__;
+            if(!attrs) return data;
+
+            cc_attrs_list.forEach( k => {
+                const key = `${prop}$_$${k}`;
+                attrs[key] != undefined && (data[key] = attrs[key]);
+            } )
+
+            return data;
+        }
+
+        function is_ccclass(target) {
+
+        }
+
+        const cc = {
+            attributes,
+            is_ccclass
+        }
+
+
         function mixins(...classes) {
+            const ccc = global.cc;
+            const ccd = ccc._decorator;
 
             return function(ctor) {
                 classes.forEach( e => {
@@ -32,19 +74,19 @@
                             ctor.prototype[k] = ret;
                         }
                     } );
-                    console.log('-------------------\n')
-                    console.log(JSON.stringify(e.prototype))
+                    console.log('-------------------\n\n')
                     const info = e.prototype;
-                    console.log("\t\tINFOR >>", Object.keys(info))
                     const is_c = info.__classname__ != undefined;
-                    console.log("Is CCCLASS: ", is_c);
                     const cont = info.constructor;
-                    const ccc = global.cc;
-                    const ccd = ccc._decorator;
+
+                    console.log(info);
+
+
                     if(is_c) {
                         const att = cont.__attrs__;
                         console.log("ATTRIBUTE: >>", att)
                         for(const ret of cont.__props__) {
+                            console.log("]]]]]]]]]]", attributes(cont, ret));
                             //console.log("PROP:", ret, " >> DEFAULT:", att[`${ret}$_$default`], " >> TYPE: ", att[`${ret}$_$type`]);
                             Reflect.defineProperty(ctor.prototype, ret, {
                                 value: att[`${ret}$_$default`],
@@ -54,26 +96,31 @@
                             })
                             const _ctor = att[`${ret}$_$ctor`];
                             const _type = att[`${ret}$_$type`];
-                            if(_type === 'Object') {
-                                ccd.type(_ctor)(ctor.prototype, ret);
-                            } else {
-                                switch(_type.name) {
-                                    case 'String': {
-                                        ccd.type(ccc.CCString)(ctor.prototype, ret);
-                                        break;
-                                    }
-                                    case 'Float': {
-                                        ccd.type(ccc.CCFloat)(ctor.prototype, ret);
-                                        break;
-                                    }
-                                    case 'Integer': {
-                                        ccd.type(ccc.CCInteger)(ctor.prototype, ret);
-                                        break;
+                            if(!!_type) {
+                                if(_type === 'Object') {
+                                    ccd.type(_ctor)(ctor.prototype, ret);
+                                } else {
+                                    switch(_type.name) {
+                                        case 'String': {
+                                            ccd.type(ccc.CCString)(ctor.prototype, ret);
+                                            break;
+                                        }
+                                        case 'Float': {
+                                            ccd.type(ccc.CCFloat)(ctor.prototype, ret);
+                                            break;
+                                        }
+                                        case 'Integer': {
+                                            ccd.type(ccc.CCInteger)(ctor.prototype, ret);
+                                            break;
+                                        }
                                     }
                                 }
+                            } else {
+                                console.log("NOT RAW PROPERTY, MAYBET GET-SETTER", ret);
                             }
                         }
                     }
+                    console.log('\n')
             } )
 
 
