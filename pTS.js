@@ -1,18 +1,26 @@
 
 /**
- * @typedef { 'Float' | 'Interger' | 'String' } TPrimitiveType
- * @typedef { TPrimitivType | 'Object' } TCCPropertyType
+ * @typedef { 'Float' | 'Integer' | 'String' } TPrimitiveType
  *
  * @typedef { Object } IPrimitiveType
  * @property { TPrimitiveType } name
  * @property { number | string } default
  *
+ * @typedef { IPrimitiveType | 'Object' } TCCPropertyType
+ * 
+ * @typedef { Object } ICCObject
+ * @property { null | string | number } [default]
+ * @property { TCCPropertyType } [type]
+ * @property { boolean } [hasGetter]
+ * @property { boolean } [hasSetter]
+ * @property { boolean } [serializable]
+ * @property { Function } [ctor]
  *
  */
 
-
 (
     function(global) {
+        const gcc = global.cc;
 
         function random_character(divided = false) {
             const rander = Math.random() * (26) >> 0;
@@ -35,96 +43,263 @@
             console.log(constructor)
         }
 
-        const cc_attrs_list = ['default', 'type', 'ctor', 'hasGetter', 'serializable', 'hasSetter']
+        const cc_attrs_list = [
+            'default',
+            'ctor',
+            'hasGetter',
+            'hasSetter',
+            'serializable',
+            'type',
+            'visible',
+            'displayName',
+            'displayOrder',
+            'tooltip',
+            'group',
+            'multiline',
+            'readonly',
+            'min',
+            'max',
+            'step',
+            'range',
+            'slide',
+            'serializable',
+            'formerlySerializedAs',
+            'editorOnly',
+            'override',
+            'animatable',
+            'unit',
+            'radian',
+            'userData',
+            'radioGroup',
+        ]
 
-        function attributes(target, prop) {
-            const data = {}
-            const prototype = target.prototype || target;
+        function cc_attrs_getter(_prototype) {
+            const prototype = _prototype.prototype || _prototype;
             const constructor = prototype.constructor || prototype;
-            const attrs = constructor.__attrs__;
-            if(!attrs) return data;
+            return constructor.__attrs__;
+        }
+
+        function cc_props_getter(_prototype) {
+            const prototype = _prototype.prototype || _prototype;
+            const constructor = prototype.constructor || prototype;
+            return constructor.__props__;
+        }
+
+        function _cc_attribute(_attr, _property) {
+            const data = {}
 
             cc_attrs_list.forEach( k => {
-                const key = `${prop}$_$${k}`;
-                attrs[key] != undefined && (data[key] = attrs[key]);
-            } )
+                const key = `${_property}$_$${k}`;
+                (_attr[key] !== undefined) && (data[k] = _attr[key]);
+            })
 
             return data;
         }
 
-        function is_ccclass(target) {
+        function cc_attribute(_prototype, _property) {
+            const attrs = cc_attrs_getter(_prototype);
 
+            if(!attrs) return {};
+
+            return _cc_attribute(attrs, _property);
+        }
+
+        function cc_attributes(_prototype) {
+            const attrs = cc_attrs_getter(_prototype);
+            const props = cc_props_getter(_prototype);
+
+            const dataz = {};
+
+            for(const i in props) {
+                const prop = props[i];
+
+                dataz[prop] = _cc_attribute(attrs, prop);
+            }
+
+            return dataz;
+        }
+
+        function is_ccclass(target) {
+            return target.__classname__ != undefined;
+        }
+
+        function getset_getter(obj) {
+            const dess = Object.getOwnPropertyDescriptors(obj);
+            const data = {};
+            for(const [key, des] of Object.entries(dess)) {
+                if(des.get || des.set) {
+                    data[key] = {
+                        get: des.get,
+                        set: des.set,
+                    }
+                }
+            }
+
+            return data;
+        }
+
+        /**
+         * @param { Record<string, ICCObject> } _target_attrs
+         */
+        function reflect_attrs_from_ccclass(_this_prototype, _target_attrs) {
+
+            const ccproperty = gcc._decorator.property;
+            for(const [key, value] of Object.entries(_target_attrs)) {
+                const data = {
+                    writable: true,
+                    configurable: true,
+                    enumerable: true
+                };
+
+                const { type, hasGetter, hasSetter, ctor } = value;
+
+                if(!!value.default) data.value = value.default;
+
+                Reflect.defineProperty(_this_prototype, key, data);
+
+                delete value.default;
+
+                if(type === 'Object') value.type = ctor;
+                if(hasGetter && !hasSetter) value.readonly = true;
+                ccproperty(value)(_this_prototype, key);
+            }
+        }
+
+        function attrs_primitive_getter(property) {
+
+        }
+
+        function attrs_object_getter(property) {
+
+        }
+
+        function attrs_getset_getter(property) {
+
+        }
+
+        const _attrs = {
+            primitive_getter: attrs_getset_getter,
+            object_getter: attrs_object_getter,
+            getset_getter: attrs_getset_getter,
         }
 
         const cc = {
-            attributes,
-            is_ccclass
+            attribute: cc_attribute,
+            attributes: cc_attributes,
+            is_ccclass,
+            attrs: _attrs
         }
 
+        function copy_properties(_this, _source, ..._excepts) {
+            _excepts = [..._excepts].flat();
 
-        function mixins(...classes) {
-            const ccc = global.cc;
-            const ccd = ccc._decorator;
+            const _tproto = _this.prototype;
+            const _sproto = _source.prototype;
 
-            return function(ctor) {
-                classes.forEach( e => {
-                    Object.getOwnPropertyNames(e.prototype).forEach( k => {
-                        const ret = e.prototype[k];
-                        if(typeof ret === 'function' && k != 'constructor') {
-                            ctor.prototype[k] = ret;
-                        }
-                    } );
-                    console.log('-------------------\n\n')
-                    const info = e.prototype;
-                    const is_c = info.__classname__ != undefined;
-                    const cont = info.constructor;
+            const instance = new _sproto.constructor();
 
-                    console.log(info);
+            console.log("INST", instance)
 
+            const result = Object.keys(instance).filter(item => !_excepts.includes(item));
 
-                    if(is_c) {
-                        const att = cont.__attrs__;
-                        console.log("ATTRIBUTE: >>", att)
-                        for(const ret of cont.__props__) {
-                            console.log("]]]]]]]]]]", attributes(cont, ret));
-                            //console.log("PROP:", ret, " >> DEFAULT:", att[`${ret}$_$default`], " >> TYPE: ", att[`${ret}$_$type`]);
-                            Reflect.defineProperty(ctor.prototype, ret, {
-                                value: att[`${ret}$_$default`],
-                                writable: true,
-                                configurable: true,
-                                enumerable: true,
+            for(const ret of result) _tproto[ret] = instance[ret];
+        }
+
+        function copy_functions(_this, ..._sources) {
+            _sources = [..._sources].flat();
+            const _tproto = _this.prototype;
+
+            for(const _source of _sources) {
+                const _sproto = _source.prototype;
+
+                Object.getOwnPropertyNames(_sproto).forEach( property => {
+                    if(property === 'constructor') return;
+
+                    const descriptor = Object.getOwnPropertyDescriptor(_sproto, property);
+                    if(!descriptor) return;
+
+                    if(typeof descriptor.value === 'function') _tproto[property] = descriptor.value;
+                } )
+            }
+        }
+
+        function copy_getset(_this, ..._sources) {
+            _sources = [..._sources].flat();
+            const _tproto = _this.prototype;
+
+            for(const _source of _sources) {
+                const _sproto = _source.prototype;
+
+                Object.getOwnPropertyNames(_sproto).forEach( property => {
+                    if(property === 'constructor') return;
+
+                    const descriptor = Object.getOwnPropertyDescriptor(_sproto, property);
+                    if(!descriptor) return;
+                    const { get, set, enumerable, configurable } = descriptor;
+
+                    if(get || set) {
+                        Object.defineProperty(_tproto, property, {
+                            get: get ? get.bind(_tproto) : undefined,
+                            set: set ? set.bind(_tproto) : undefined,
+                            enumerable,
+                            configurable,
+                        })
+                    }
+                } )
+            }
+        }
+
+        function coppy_object_functions(_this, ..._sources) {
+            _sources = [..._sources].flat();
+            const _tproto = _this.prototype;
+
+            for(const _source of _sources) {
+                const _sproto = _source.prototype;
+                const _name = gcc.js.getClassName(_sproto)
+                console.log("---------------------------------");
+
+                Object.getOwnPropertyNames(_sproto).forEach( property => {
+                    if(property === 'constructor') return;
+                    const descriptor = Object.getOwnPropertyDescriptor(_sproto, property);
+                    if(!descriptor) return;
+
+                    console.log(`${_name} > ${property} >`, descriptor.value, descriptor.get);
+                    if(typeof descriptor.value === 'function') {
+                        _tproto[property] = descriptor.value;
+                    } else {
+                        const { get, set, enumerable, configurable } = descriptor;
+
+                        if(get || set) {
+                            Object.defineProperty(_tproto, property, {
+                                get: get ? get.bind(_tproto) : undefined,
+                                set: set ? set.bind(_tproto) : undefined,
+                                enumerable,
+                                configurable,
                             })
-                            const _ctor = att[`${ret}$_$ctor`];
-                            const _type = att[`${ret}$_$type`];
-                            if(!!_type) {
-                                if(_type === 'Object') {
-                                    ccd.type(_ctor)(ctor.prototype, ret);
-                                } else {
-                                    switch(_type.name) {
-                                        case 'String': {
-                                            ccd.type(ccc.CCString)(ctor.prototype, ret);
-                                            break;
-                                        }
-                                        case 'Float': {
-                                            ccd.type(ccc.CCFloat)(ctor.prototype, ret);
-                                            break;
-                                        }
-                                        case 'Integer': {
-                                            ccd.type(ccc.CCInteger)(ctor.prototype, ret);
-                                            break;
-                                        }
-                                    }
-                                }
-                            } else {
-                                console.log("NOT RAW PROPERTY, MAYBET GET-SETTER", ret);
-                            }
                         }
                     }
-                    console.log('\n')
+                } );
+            }
+        }
+
+        function mixins(..._classes) {
+            return function(_this) {
+                _classes.forEach( _class => {
+
+                    const { prototype } = _class;
+                    const props = cc_props_getter(prototype);
+                    if(is_ccclass(prototype)) {
+                        const attrs = cc_attributes(prototype);
+                        reflect_attrs_from_ccclass(_this.prototype, attrs);
+                    }
+
+                    coppy_object_functions(_this, _class);
+                    copy_properties(_this, _class, props || []);
+
             } )
 
 
-                return ctor
+                return _this
             }
         }
 
